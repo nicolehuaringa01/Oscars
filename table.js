@@ -1,4 +1,5 @@
 let allMovies = [];
+let currentView = "all";
 
 const csvFile = "movies.csv";
 
@@ -9,27 +10,32 @@ fetch(csvFile)
     const parsed = Papa.parse(text, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: false, // keep everything as text (safer)
     });
 
-    console.log(parsed); // 🔍 DEBUG — check this in console
-
-    const data = parsed.data;
+    let data = parsed.data;
 
     // 💰 Sort by Box Office (highest → lowest)
-data.sort((a, b) => {
-  const getValue = (val) => {
-    if (!val || val === "Nan") return 0;
-    return parseFloat(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
-  };
+    const getValue = (val) => {
+      if (!val || val === "Nan") return 0;
+      return parseFloat(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
+    };
 
-allMovies = data;
-renderTable(allMovies);
+    data.sort((a, b) =>
+      getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"])
+    );
 
-  return getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"]);
-});
+    allMovies = data;
 
-  function renderTable(dataArray) {
+    renderTable(allMovies);
+    setupSearch();
+    setupFilters();
+    setupNav();
+  })
+  .catch(err => console.error("Error:", err));
+
+
+// 🎯 Render Table
+function renderTable(dataArray) {
   const body = document.getElementById("tableBody");
   body.innerHTML = "";
 
@@ -41,54 +47,109 @@ renderTable(allMovies);
   dataArray.forEach(movie => {
     if (!movie["Movie_Title"]) return;
 
+    const tr = document.createElement("tr");
 
-      const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${clean(movie["Movie_Title"])}</td>
+      <td>${clean(movie["Year of Ceremony"])}</td>
+      <td>${clean(movie["Nominations"])}</td>
+      <td>${clean(movie["Directed_By"])}</td>
+      <td>$${clean(movie["Box Office (in millions)"])}M</td>
+    `;
 
-      tr.innerHTML = `
-        <td>${clean(movie["Movie_Title"])}</td>
-        <td>${clean(movie["Date_Released"])}</td>
-        <td>${clean(movie["Nominations"])}</td>
-        <td>${clean(movie["Directed_By"])}</td>
-        <td>$${clean(movie["Box Office (in millions)"])}M</td>
-      `;
+    tr.onclick = () => openModal(movie);
+    body.appendChild(tr);
+  });
+}
 
-      tr.onclick = () => openModal(movie);
-      body.appendChild(tr);
+
+// 🔍 Search
+function setupSearch() {
+  document.getElementById("searchInput").addEventListener("keyup", function () {
+    const filter = this.value.toLowerCase();
+
+    const filtered = allMovies.filter(movie =>
+      Object.values(movie).join(" ").toLowerCase().includes(filter)
+    );
+
+    renderTable(applyCurrentView(filtered));
+  });
+}
+
+
+// 🎛️ Dropdown filters
+function setupFilters() {
+  document.getElementById("filterType").addEventListener("change", function () {
+
+    let filtered = [...allMovies];
+
+    if (this.value === "nonUS") {
+      filtered = filtered.filter(movie =>
+        movie["Filming_Country"] &&
+        !movie["Filming_Country"].includes("United States")
+      );
+    }
+
+    if (this.value === "highProfit") {
+      filtered = filtered.filter(movie => {
+        const val = parseFloat(movie["% of budget/box office made"]);
+        return !isNaN(val) && val < 33;
+      });
+    }
+
+    renderTable(applyCurrentView(filtered));
+  });
+}
+
+
+// 🧭 Navbar views
+function setupNav() {
+  document.querySelectorAll("nav a").forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      currentView = link.dataset.view;
+      renderTable(applyCurrentView(allMovies));
     });
+  });
+}
 
-    document.getElementById("filterType").addEventListener("change", function () {
 
-  let filtered = [...allMovies];
+// 🧠 View logic
+function applyCurrentView(data) {
+  let filtered = [...data];
 
-  if (this.value === "nonUS") {
-    filtered = filtered.filter(movie =>
-      movie["Filming_Country"] && !movie["Filming_Country"].includes("United States")
+  if (currentView === "winners") {
+    filtered = filtered.filter(m =>
+      m["Nominations"] && m["Nominations"].includes("WIN")
     );
   }
 
-  if (this.value === "highProfit") {
-    filtered = filtered.filter(movie => {
-      const val = parseFloat(movie["% of budget/box office made"]);
+  if (currentView === "international") {
+    filtered = filtered.filter(m =>
+      m["Producer_Country"] &&
+      !m["Producer_Country"].includes("United States")
+    );
+  }
+
+  if (currentView === "highProfit") {
+    filtered = filtered.filter(m => {
+      const val = parseFloat(m["% of budget/box office made"]);
       return !isNaN(val) && val < 33;
     });
   }
 
-  renderTable(filtered);
-});
+  if (currentView === "women") {
+    // ⚠️ requires you to add this column in CSV
+    filtered = filtered.filter(m =>
+      m["Director_Gender"] === "Female"
+    );
+  }
 
-    // 🔍 Search
-    document.getElementById("searchInput").addEventListener("keyup", function () {
-      const filter = this.value.toLowerCase();
-      const trs = body.getElementsByTagName("tr");
+  return filtered;
+}
 
-      for (let tr of trs) {
-        tr.style.display = tr.textContent.toLowerCase().includes(filter) ? "" : "none";
-      }
-    });
 
-  })
-  .catch(err => console.error("Error:", err));
-
+// 🎬 Modal
 function openModal(movie) {
 
   const clean = (value) => {
@@ -100,9 +161,9 @@ function openModal(movie) {
   let performance = "";
 
   if (!isNaN(gain)) {
-    performance = gain < 33
-      ? `<span class="tag good">Hit</span>`
-      : `<span class="tag bad">Flop-ish</span>`;
+    if (gain < 20) performance = `<span class="tag good">Blockbuster</span>`;
+    else if (gain < 33) performance = `<span class="tag good">Hit</span>`;
+    else performance = `<span class="tag bad">Flop</span>`;
   }
 
   document.getElementById("modalContent").innerHTML = `
@@ -110,13 +171,8 @@ function openModal(movie) {
 
     <p><strong>Year:</strong> ${clean(movie["Year of Ceremony"])}</p>
     <p><strong>Director:</strong> ${clean(movie["Directed_By"])}</p>
-    <p><strong>Written By:</strong> ${clean(movie["Written_By"])}</p>
-    <p><strong>Produced By:</strong> ${clean(movie["Produced_By"])}</p>
     <p><strong>Cast:</strong> ${clean(movie["Cast"])}</p>
-
     <p><strong>Genre:</strong> ${clean(movie["Film genre "])}</p>
-    <p><strong>Language:</strong> ${clean(movie["Language"])}</p>
-    <p><strong>Country:</strong> ${clean(movie["Producer_Country"])}</p>
 
     <p><strong>Budget:</strong> $${clean(movie["Budget (in millions)"])}M</p>
     <p><strong>Box Office:</strong> $${clean(movie["Box Office (in millions)"])}M</p>
@@ -125,12 +181,10 @@ function openModal(movie) {
     <p><strong>RT Audience:</strong> ${clean(movie["RT Audience"])}</p>
 
     <p><strong>Summary:</strong><br>${clean(movie["Summary"])}</p>
-    <p><strong>Notes:</strong><br>${clean(movie["Notes"])}</p>
   `;
 
   document.getElementById("modal").style.display = "flex";
 }
-
 
 function closeModal() {
   document.getElementById("modal").style.display = "none";
