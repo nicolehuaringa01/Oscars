@@ -53,6 +53,33 @@ body {
       background: rgba(255,255,255,0.06);
     }
 
+    .navbar {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 15px;
+  background: rgba(255,255,255,0.05);
+}
+
+.navbar a {
+  color: #ccc;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+
+.navbar a:hover {
+  color: white;
+}
+
+select {
+  display: block;
+  margin: 10px auto;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+
     /* Modal */
     .modal {
       position: fixed;
