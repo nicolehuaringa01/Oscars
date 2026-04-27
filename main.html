@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Film Archive</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to bottom, #0f0f0f, #1a1a1a);
+      color: #f5f5f5;
+    }
+
+    header {
+      text-align: center;
+      padding: 40px 20px 10px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+    }
+
+    .search-container {
+      text-align: center;
+      margin: 20px;
+    }
+
+    input {
+      padding: 10px 15px;
+      width: 60%;
+      max-width: 400px;
+      border-radius: 20px;
+      border: none;
+      outline: none;
+    }
+
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(255,255,255,0.08);
+    }
+
+    tr {
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    tr:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: #1c1c1c;
+      padding: 25px;
+      max-width: 800px;
+      width: 100%;
+      border-radius: 10px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .close {
+      float: right;
+      cursor: pointer;
+      font-size: 1.2rem;
+      opacity: 0.7;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      margin-left: 5px;
+    }
+
+    .good { background: #2ecc71; color: black; }
+    .bad { background: #e74c3c; }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Film Archive</h1>
+  <p>Not every film makes history… but every film leaves a trace.</p>
+</header>
+
+<div class="search-container">
+  <input type="text" id="searchInput" placeholder="Search movie...">
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Year</th>
+      <th>Nominations</th>
+      <th>Director</th>
+      <th>Box Office</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">✕</span>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const csvFile = "movies.csv"; // rename your file pls 😭
+
+fetch(csvFile)
+.then(res => res.text())
+.then(data => {
+  const rows = data.split("\n").map(r => r.split("\t")); // IMPORTANT: using TAB
+
+  const headers = rows[0];
+  const body = document.getElementById("tableBody");
+
+  rows.slice(1).forEach(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = row[i]);
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${obj["Movie_Title"]}</td>
+      <td>${obj["Year of Ceremony"]}</td>
+      <td>${obj["Nominations"]}</td>
+      <td>${obj["Directed_By"]}</td>
+      <td>$${obj["Box Office (in millions)"]}M</td>
+    `;
+
+    tr.onclick = () => openModal(obj);
+    body.appendChild(tr);
+  });
+
+  // Search
+  document.getElementById("searchInput").addEventListener("keyup", function(){
+    const filter = this.value.toLowerCase();
+    const trs = body.getElementsByTagName("tr");
+
+    for (let tr of trs) {
+      tr.style.display = tr.textContent.toLowerCase().includes(filter) ? "" : "none";
+    }
+  });
+
+});
+
+function openModal(movie) {
+  const gain = parseFloat(movie["% of budget/box office made"]);
+  let performance = "";
+
+  if (!isNaN(gain)) {
+    performance = gain < 33 
+      ? `<span class="tag good">Hit</span>` 
+      : `<span class="tag bad">Flop-ish</span>`;
+  }
+
+  document.getElementById("modalContent").innerHTML = `
+    <h2>${movie["Movie_Title"]} ${performance}</h2>
+    <p><strong>Year:</strong> ${movie["Year of Ceremony"]}</p>
+    <p><strong>Director:</strong> ${movie["Directed_By"]}</p>
+    <p><strong>Cast:</strong> ${movie["Cast"]}</p>
+    <p><strong>Genre:</strong> ${movie["Film genre "]}</p>
+    <p><strong>Language:</strong> ${movie["Language"]}</p>
+    <p><strong>Country:</strong> ${movie["Producer_Country"]}</p>
+    <p><strong>Budget:</strong> $${movie["Budget (in millions)"]}M</p>
+    <p><strong>Box Office:</strong> $${movie["Box Office (in millions)"]}M</p>
+    <p><strong>RT Critics:</strong> ${movie["RT Critics"]}</p>
+    <p><strong>RT Audience:</strong> ${movie["RT Audience"]}</p>
+    <p><strong>Summary:</strong> ${movie["Summary"]}</p>
+    <p><strong>Notes:</strong> ${movie["Notes"]}</p>
+  `;
+
+  document.getElementById("modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+</script>
+
+</body>
+</html>
