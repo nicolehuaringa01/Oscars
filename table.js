@@ -21,7 +21,7 @@ fetch(csvFile)
     };
 
     data.sort((a, b) =>
-      getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"])
+      getValue(b["Box Office (in millions)"]) - getValue(a["Budget (in millions)"])
     );
 
     allMovies = data;
