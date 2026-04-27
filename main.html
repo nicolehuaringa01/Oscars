@@ -146,7 +146,7 @@ const csvFile = "movies.csv"; // rename your file pls 😭
 fetch(csvFile)
 .then(res => res.text())
 .then(data => {
-  const rows = data.split("\n").map(r => r.split("\t")); // IMPORTANT: using TAB
+  const rows = data.split("\n").map(r => r.split(",")); // IMPORTANT: using TAB
 
   const headers = rows[0];
   const body = document.getElementById("tableBody");
