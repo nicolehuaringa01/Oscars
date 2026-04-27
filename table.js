@@ -14,21 +14,21 @@ fetch(csvFile)
 
     let data = parsed.data;
 
-    // 💰 Sort by Box Office (highest → lowest)
+    // 💰 Helper to safely parse numbers
     const getValue = (val) => {
       if (!val || val === "Nan") return 0;
       return parseFloat(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
     };
 
+    // 💰 Sort by Box Office (corrected)
     data.sort((a, b) =>
-      getValue(b["Box Office (in millions)"]) - getValue(a["Budget (in millions)"])
+      getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"])
     );
 
     allMovies = data;
 
     renderTable(allMovies);
     setupSearch();
-    setupFilters();
     setupNav();
   })
   .catch(err => console.error("Error:", err));
@@ -60,6 +60,12 @@ function renderTable(dataArray) {
     tr.onclick = () => openModal(movie);
     body.appendChild(tr);
   });
+
+  // 📊 Results counter (optional but recommended)
+  const counter = document.getElementById("resultsCount");
+  if (counter) {
+    counter.textContent = `${dataArray.length} films`;
+  }
 }
 
 
@@ -77,50 +83,37 @@ function setupSearch() {
 }
 
 
-// 🎛️ Dropdown filters
-function setupFilters() {
-  document.getElementById("filterType").addEventListener("change", function () {
-
-    let filtered = [...allMovies];
-
-    if (this.value === "nonUS") {
-      filtered = filtered.filter(movie =>
-        movie["Filming_Country"] &&
-        !movie["Filming_Country"].includes("United States")
-      );
-    }
-
-    if (this.value === "highProfit") {
-      filtered = filtered.filter(movie => {
-        const val = parseFloat(movie["% of budget/box office made"]);
-        return !isNaN(val) && val < 33;
-      });
-    }
-
-    renderTable(applyCurrentView(filtered));
-  });
-}
-
-
-// 🧭 Navbar views
+// 🧭 Navbar filters
 function setupNav() {
-  document.querySelectorAll("nav a").forEach(link => {
+  const links = document.querySelectorAll("nav a");
+
+  links.forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
+
+      // ✨ Active state UI
+      links.forEach(l => l.classList.remove("active"));
+      link.classList.add("active");
+
       currentView = link.dataset.view;
-      renderTable(applyCurrentView(allMovies));
+
+      const filtered = applyCurrentView(allMovies);
+
+      console.log(currentView, filtered.length); // 🔍 debug
+
+      renderTable(filtered);
     });
   });
 }
 
 
-// 🧠 View logic
+// 🧠 Filter logic
 function applyCurrentView(data) {
   let filtered = [...data];
 
   if (currentView === "winners") {
     filtered = filtered.filter(m =>
-      m["Nominations"] && m["Nominations"].includes("WIN")
+      m["Nominations"]?.toUpperCase().includes("WIN")
     );
   }
 
@@ -139,7 +132,9 @@ function applyCurrentView(data) {
   }
 
   if (currentView === "women") {
-    // ⚠️ requires you to add this column in CSV
+    // ⚠️ requires column in CSV
+    if (!data[0]["Director_Gender"]) return data;
+
     filtered = filtered.filter(m =>
       m["Director_Gender"] === "Female"
     );
@@ -185,6 +180,7 @@ function openModal(movie) {
 
   document.getElementById("modal").style.display = "flex";
 }
+
 
 function closeModal() {
   document.getElementById("modal").style.display = "none";
