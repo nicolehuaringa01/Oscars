@@ -1,3 +1,5 @@
+let allMovies = [];
+
 const csvFile = "movies.csv";
 
 fetch(csvFile)
@@ -21,20 +23,24 @@ data.sort((a, b) => {
     return parseFloat(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
   };
 
+allMovies = data;
+renderTable(allMovies);
+
   return getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"]);
 });
-    
-    const body = document.getElementById("tableBody");
 
-    const clean = (value) => {
-      if (!value || value === "Nan") return "—";
-      return value.toString().replace(/\n/g, "<br>");
-    };
+  function renderTable(dataArray) {
+  const body = document.getElementById("tableBody");
+  body.innerHTML = "";
 
-    data.forEach(movie => {
+  const clean = (value) => {
+    if (!value || value === "Nan") return "—";
+    return value.toString().replace(/\n/g, "<br>");
+  };
 
-      // 🛑 Skip broken rows (this is key)
-      if (!movie["Movie_Title"]) return;
+  dataArray.forEach(movie => {
+    if (!movie["Movie_Title"]) return;
+
 
       const tr = document.createElement("tr");
 
@@ -49,6 +55,26 @@ data.sort((a, b) => {
       tr.onclick = () => openModal(movie);
       body.appendChild(tr);
     });
+
+    document.getElementById("filterType").addEventListener("change", function () {
+
+  let filtered = [...allMovies];
+
+  if (this.value === "nonUS") {
+    filtered = filtered.filter(movie =>
+      movie["Filming_Country"] && !movie["Filming_Country"].includes("United States")
+    );
+  }
+
+  if (this.value === "highProfit") {
+    filtered = filtered.filter(movie => {
+      const val = parseFloat(movie["% of budget/box office made"]);
+      return !isNaN(val) && val < 33;
+    });
+  }
+
+  renderTable(filtered);
+});
 
     // 🔍 Search
     document.getElementById("searchInput").addEventListener("keyup", function () {
