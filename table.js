@@ -13,6 +13,17 @@ fetch(csvFile)
     console.log(parsed); // 🔍 DEBUG — check this in console
 
     const data = parsed.data;
+
+    // 💰 Sort by Box Office (highest → lowest)
+data.sort((a, b) => {
+  const getValue = (val) => {
+    if (!val || val === "Nan") return 0;
+    return parseFloat(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
+  };
+
+  return getValue(b["Box Office (in millions)"]) - getValue(a["Box Office (in millions)"]);
+});
+    
     const body = document.getElementById("tableBody");
 
     const clean = (value) => {
@@ -29,7 +40,7 @@ fetch(csvFile)
 
       tr.innerHTML = `
         <td>${clean(movie["Movie_Title"])}</td>
-        <td>${clean(movie["Year of Ceremony"])}</td>
+        <td>${clean(movie["Date_Released"])}</td>
         <td>${clean(movie["Nominations"])}</td>
         <td>${clean(movie["Directed_By"])}</td>
         <td>$${clean(movie["Box Office (in millions)"])}M</td>
